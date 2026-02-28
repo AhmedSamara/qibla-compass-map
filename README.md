@@ -45,37 +45,6 @@ The Qibla bearing is calculated using the spherical trigonometry initial bearing
 
 where φ₁ is your latitude, φ₂ is the Kaaba's latitude (21.4225°N), and Δλ is the difference in longitude from the Kaaba (39.8262°E). The map line follows the true great circle path, not a straight line on the Mercator projection.
 
-## Deploy Your Own
-
-### GitHub Pages (free)
-
-1. Fork this repo
-2. Go to **Settings → Pages → Deploy from branch → main**
-3. Your app will be live at `https://your-username.github.io/qibla-compass/`
-
-### Any Static Host
-
-Upload the entire folder to Netlify, Vercel, Cloudflare Pages, or any HTTPS-enabled host. No build step required.
-
-> **Important:** HTTPS is required. Compass and geolocation APIs are blocked on plain HTTP.
-
-## Project Structure
-
-```
-qibla-compass/
-├── index.html          # The entire app (single file)
-├── manifest.json       # PWA manifest
-├── sw.js               # Service worker for offline support
-├── icons/
-│   ├── icon-72x72.png
-│   ├── icon-96x96.png
-│   ├── icon-128x128.png
-│   ├── icon-144x144.png
-│   ├── icon-152x152.png
-│   ├── icon-192x192.png
-│   ├── icon-384x384.png
-│   └── icon-512x512.png
-└── README.md
 ```
 
 ## Browser Support
