@@ -1,75 +1,102 @@
 # 🕋 Qibla Compass
 
-A beautiful, mobile-first web app that calculates and displays the direction of the Kaaba in Makkah from your current location using your device's GPS and compass sensors.
+A beautiful, installable Progressive Web App that finds the direction of the Kaaba in Makkah from anywhere using your phone's compass and GPS.
 
-![HTML](https://img.shields.io/badge/HTML-CSS--JS-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![HTML](https://img.shields.io/badge/vanilla-HTML%2FCSS%2FJS-orange) ![PWA](https://img.shields.io/badge/PWA-installable-blue) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## Features
 
 - **Live compass** — reads your device's magnetometer and rotates in real time, with the Kaaba icon always pointing toward Qibla
-- **GPS-based Qibla calculation** — uses the great circle (spherical trigonometry) formula for accurate bearing from any location on Earth
-- **Interactive map** — shows your position with a great circle path drawn to Makkah so you can verify the Qibla direction against real-world landmarks
-- **Heading line** — a live green line on the map shows where your phone is currently pointing, making calibration intuitive
-- **Alignment detection** — visual and text feedback when you're facing within ±5° of the Qibla
-- **Distance readout** — Haversine distance to the Kaaba in kilometers
-- **Dark, gold-accented UI** — designed to feel reverent and easy to read outdoors
+- **GPS-based Qibla calculation** — uses the great circle formula for accurate bearing from any location on Earth
+- **Interactive map** — shows your position with a great circle path drawn to Makkah so you can verify the direction against real-world landmarks
+- **Heading line** — a live green line on the map shows where your phone is currently pointing for easy calibration
+- **Alignment detection** — visual feedback when you're facing within ±5° of the Qibla
+- **Installable PWA** — add to your home screen on iOS or Android for a native app experience
+- **Works offline** — cached via service worker after first load
+- **No tracking, no ads** — just a compass
+
+## Install on Your Phone
+
+### Android
+
+1. Open the app URL in Chrome
+2. Tap the **"Install"** banner that appears, or tap ⋮ → **"Install app"**
+3. The app appears on your home screen
+
+### iPhone / iPad
+
+1. Open the app URL in **Safari** (must be Safari, not Chrome)
+2. Tap the **Share** button (⎋)
+3. Scroll down and tap **"Add to Home Screen"**
+4. Tap **"Add"**
+
+Once installed it launches fullscreen without the browser bar and works offline.
 
 ## How It Works
 
-The app uses two browser APIs:
-
-- **Geolocation API** — gets your latitude/longitude via GPS
-- **DeviceOrientation API** — reads your phone's compass heading
-
-The Qibla bearing is calculated using the standard great circle initial bearing formula:
+The Qibla bearing is calculated using the spherical trigonometry initial bearing formula:
 
 ```
 θ = atan2(sin(Δλ), cos(φ₁)·tan(φ₂) − sin(φ₁)·cos(Δλ))
 ```
 
-where φ₁ is your latitude, φ₂ is the Kaaba's latitude (21.4225°N), and Δλ is the difference in longitude from the Kaaba (39.8262°E).
+where φ₁ is your latitude, φ₂ is the Kaaba's latitude (21.4225°N), and Δλ is the difference in longitude from the Kaaba (39.8262°E). The map line follows the true great circle path, not a straight line on the Mercator projection.
 
-## Getting Started
+## Deploy Your Own
 
-### Option 1: GitHub Pages (recommended)
+### GitHub Pages (free)
 
-1. Fork or clone this repo
+1. Fork this repo
 2. Go to **Settings → Pages → Deploy from branch → main**
-3. Visit `https://your-username.github.io/qibla-compass/`
+3. Your app will be live at `https://your-username.github.io/qibla-compass/`
 
-### Option 2: Any static host
+### Any Static Host
 
-Upload `index.html` to any HTTPS-enabled static host (Netlify, Vercel, Cloudflare Pages, etc.)
+Upload the entire folder to Netlify, Vercel, Cloudflare Pages, or any HTTPS-enabled host. No build step required.
 
-### Option 3: Local development
+> **Important:** HTTPS is required. Compass and geolocation APIs are blocked on plain HTTP.
 
-```bash
-# Any local server works — HTTPS is needed for sensors on mobile
-npx serve .
+## Project Structure
+
 ```
-
-> **Important:** Compass and geolocation APIs require HTTPS. They will not work over plain HTTP (except `localhost`).
+qibla-compass/
+├── index.html          # The entire app (single file)
+├── manifest.json       # PWA manifest
+├── sw.js               # Service worker for offline support
+├── icons/
+│   ├── icon-72x72.png
+│   ├── icon-96x96.png
+│   ├── icon-128x128.png
+│   ├── icon-144x144.png
+│   ├── icon-152x152.png
+│   ├── icon-192x192.png
+│   ├── icon-384x384.png
+│   └── icon-512x512.png
+└── README.md
+```
 
 ## Browser Support
 
-| Platform | Compass | GPS | Notes |
-|----------|---------|-----|-------|
-| iOS Safari | ✅ | ✅ | Prompts for Motion & Orientation permission |
-| Android Chrome | ✅ | ✅ | Sensors work automatically over HTTPS |
-| Desktop browsers | ❌ | ✅ | No compass hardware — shows map and bearing only |
+| Platform | Compass | GPS | Install |
+|----------|---------|-----|---------|
+| iOS Safari | ✅ | ✅ | Add to Home Screen |
+| Android Chrome | ✅ | ✅ | Install prompt |
+| Desktop Chrome | ❌ | ✅ | Install prompt |
+| Other desktop | ❌ | ✅ | — |
 
 ### Troubleshooting
 
-- **"Permission denied" on iOS** — Go to Settings → Safari → Settings for Websites → Motion & Orientation Access → set to "Ask" or "Allow," then reload
-- **Compass not responding** — Wave your phone in a figure-8 pattern to calibrate the magnetometer
-- **No GPS fix** — Make sure location services are enabled for your browser in system settings
+- **"Permission denied" on iOS** — Settings → Safari → Settings for Websites → Motion & Orientation Access → set to "Ask" or "Allow"
+- **Compass not responding** — wave your phone in a figure-8 to calibrate the magnetometer
+- **No GPS** — make sure location services are enabled for your browser
 
 ## Tech Stack
 
 - Vanilla HTML / CSS / JS — no build step, single file
 - [Leaflet.js](https://leafletjs.com/) — interactive map
-- [Carto](https://carto.com/basemaps/) — dark-styled map tiles
-- [Google Fonts](https://fonts.google.com/) — Amiri (Arabic serif) + DM Sans
+- [Carto](https://carto.com/basemaps/) — map tiles
+- [Google Fonts](https://fonts.google.com/) — Amiri + DM Sans
+- Service Worker for offline caching
 
 ## License
 
