@@ -604,6 +604,11 @@
   }
 
   function onLocationSuccess(pos) {
+    gpsReceived = true;
+    // Remove help banner if it was shown
+    const helpEl = $('gpsHelp');
+    if (helpEl) helpEl.remove();
+
     userLat = pos.coords.latitude;
     userLng = pos.coords.longitude;
     qiblaBearing = calculateQibla(userLat, userLng);
@@ -624,10 +629,60 @@
     updateUI();
   }
 
-  function onLocationError() {
+  function onLocationError(err) {
     $('gpsDot').classList.add('error');
-    $('statusText').textContent = 'Location unavailable';
     $('statusText').classList.remove('loading-pulse');
+
+    let msg = 'Location unavailable';
+    let help = '';
+
+    if (err && err.code) {
+      switch (err.code) {
+        case 1: // PERMISSION_DENIED
+          msg = 'Location permission denied';
+          help = 'Go to Settings → Privacy → Location Services → Safari Websites and set to "While Using." Then reload this page.';
+          break;
+        case 2: // POSITION_UNAVAILABLE
+          msg = 'GPS signal not found';
+          help = 'Try moving near a window or stepping outside. Indoor GPS can be unreliable.';
+          break;
+        case 3: // TIMEOUT
+          msg = 'GPS timed out';
+          help = 'Your device is taking too long to get a fix. Try moving to an area with better reception and reload.';
+          break;
+      }
+    }
+
+    $('statusText').textContent = msg;
+
+    // Show help text below status bar
+    if (help) showGpsHelp(msg, help);
+  }
+
+  function showGpsHelp(title, message) {
+    let helpEl = $('gpsHelp');
+    if (!helpEl) {
+      helpEl = document.createElement('div');
+      helpEl.id = 'gpsHelp';
+      helpEl.style.cssText = 'width:100%;max-width:380px;margin:8px 16px;padding:12px 16px;background:rgba(229,72,77,0.08);border:1px solid rgba(229,72,77,0.2);border-radius:12px;font-size:13px;color:var(--text-muted);line-height:1.5;text-align:center;';
+      // Insert after status bar
+      const statusBar = $('statusText').closest('.status-bar');
+      statusBar.parentNode.insertBefore(helpEl, statusBar.nextSibling);
+    }
+    helpEl.innerHTML = `<strong style="color:#E5484D;display:block;margin-bottom:4px">${title}</strong>${message}`;
+  }
+
+  // Safety timeout — if GPS hasn't responded at all after 20s, show help
+  let gpsReceived = false;
+  function startGpsTimeout() {
+    setTimeout(() => {
+      if (!gpsReceived && !$('gpsHelp')) {
+        $('gpsDot').classList.add('error');
+        $('statusText').textContent = 'GPS not responding';
+        $('statusText').classList.remove('loading-pulse');
+        showGpsHelp('GPS not responding', 'Make sure Location Services are enabled: Settings → Privacy & Security → Location Services → On. Also check that Safari (or your browser) has location permission. Then reload this page.');
+      }
+    }, 20000);
   }
 
   async function startApp() {
@@ -635,7 +690,8 @@
       navigator.geolocation.watchPosition(onLocationSuccess, onLocationError, {
         enableHighAccuracy: true, maximumAge: 10000, timeout: 15000
       });
-    } else { onLocationError(); }
+      startGpsTimeout();
+    } else { onLocationError({ code: 2 }); }
 
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       try {

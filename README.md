@@ -86,11 +86,55 @@ qibla-compass/
 | Desktop Chrome | ❌ | ✅ | Install prompt |
 | Other desktop | ❌ | ✅ | — |
 
-### Troubleshooting
+## Troubleshooting
 
-- **"Permission denied" on iOS** — Settings → Safari → Settings for Websites → Motion & Orientation Access → set to "Ask" or "Allow"
-- **Compass not responding** — wave your phone in a figure-8 to calibrate the magnetometer
-- **No GPS** — make sure location services are enabled for your browser
+### GPS / Location
+
+**"Location permission denied"**
+- **iOS:** Settings → Privacy & Security → Location Services → make sure it's **On**. Then scroll to **Safari Websites** and set to **"While Using"** or **"Ask."**
+- **Android:** Settings → Location → make sure it's on. Then Settings → Apps → Chrome → Permissions → Location → Allow.
+- If you previously denied permission for this site, your browser won't ask again. Reset it:
+  - **iOS Safari:** Settings → Safari → Settings for Websites → Location → find the site → set to "Ask"
+  - **Chrome:** Tap the lock/tune icon in the address bar → Permissions → Location → Allow
+
+**"GPS not responding" / stuck on "Waiting for GPS"**
+- Make sure you're on **HTTPS** (GitHub Pages provides this automatically)
+- Try stepping outside or near a window — GPS struggles indoors
+- On iOS, try closing and reopening Safari
+- Some VPNs or content blockers can interfere with geolocation — try disabling them
+
+**"GPS timed out"**
+- Your device couldn't get a fix in 15 seconds. This is common indoors. Move to a location with better sky visibility and reload.
+
+### Compass
+
+**"Compass permission denied" (iOS)**
+- Settings → Safari → **Settings for Websites → Motion & Orientation Access** → set to **"Ask"** or **"Allow"**
+- Then reload the page — you should get the permission popup again
+
+**Compass not responding / inaccurate**
+- Wave your phone in a **figure-8 pattern** several times to calibrate the magnetometer
+- Move away from metal objects, magnets, or electronics that cause interference
+- Remove your phone from its case if it has a magnetic mount or clasp
+- The green line on the map can help you verify — point your phone toward a known landmark and see if the line matches
+
+**"No compass — showing bearing only"**
+- Your device doesn't have a magnetometer, or the browser can't access it. The Qibla bearing and map still work — use the gold dashed line on the map to identify the direction visually.
+
+### Home Screen / PWA
+
+**"Page not found" when opening from home screen**
+- Delete the shortcut and re-add it from the browser
+- Make sure the site loads correctly in the browser first before adding to home screen
+
+**App doesn't update after a new version**
+- The service worker caches the app for offline use. Force a refresh: close and reopen the app, or in Safari go to the site and pull down to refresh.
+
+### Map
+
+**Map tiles are blank**
+- You're offline and haven't cached tiles yet. Use the **"Save Map for Offline"** button while connected to download tiles around your area.
+- The compass and bearing work fine without the map.
 
 ## Tech Stack
 
