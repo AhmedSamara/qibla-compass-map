@@ -1,7 +1,7 @@
 # 🕋 Qibla Compass
 
 
-### **[▶ Open Qibla Compass](https://ahmedsamara.github.io/qibla-compass/)**
+### **[▶ Open Qibla Compass](https://ahmedsamara.github.io/qibla-compass-map/)**
 
 A beautiful, installable Progressive Web App that finds the direction of the Kaaba in Makkah from anywhere using your phone's compass and GPS.
 
