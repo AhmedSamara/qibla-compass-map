@@ -291,7 +291,7 @@
 <div class="overlay" id="overlay">
   <div class="icon">🕋</div>
   <h2>Qibla Compass</h2>
-  <p>This app needs access to your location and device compass to calculate the direction of the Kaaba in Makkah.</p>
+  <p>This app needs access to your location to calculate the direction of the Kaaba in Makkah. On mobile devices with a compass, you'll see live direction. On desktop, use the map to find the Qibla.</p>
   <button class="btn" id="startBtn">Enable Compass</button>
   <p id="overlayError" style="color:#E5484D;margin-top:16px;display:none"></p>
 </div>
@@ -356,7 +356,7 @@
     </div>
     <div class="map-legend">
       <div class="legend-item"><span class="legend-swatch gold"></span> Qibla direction</div>
-      <div class="legend-item"><span class="legend-swatch green"></span> You're facing</div>
+      <div class="legend-item" id="facingLegend"><span class="legend-swatch green"></span> You're facing</div>
     </div>
   </div>
 
@@ -464,6 +464,7 @@
   const KAABA_LAT = 21.4225, KAABA_LNG = 39.8262;
   let userLat = null, userLng = null, qiblaBearing = null, currentHeading = 0;
   let compassSupported = false;
+  let noCompassAvailable = false;
   let map = null, userMarker = null, qiblaLine = null, headingLine = null;
   let mapInitialized = false;
 
@@ -528,7 +529,7 @@
   function initMap(lat, lng) {
     if (mapInitialized) return;
     mapInitialized = true;
-    map = L.map('map', { zoomControl:false, attributionControl:false }).setView([lat,lng], 5);
+    map = L.map('map', { zoomControl:false, attributionControl:false }).setView([lat,lng], 16);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 18, subdomains: 'abcd'
     }).addTo(map);
@@ -550,7 +551,13 @@
       color:'#2DD4A8', weight:3, opacity:0.7, lineCap:'round'
     }).addTo(map);
 
-    map.fitBounds(L.latLngBounds([[lat,lng],[KAABA_LAT,KAABA_LNG]]), { padding:[35,35] });
+    // Hide heading line if no compass is available
+    if (noCompassAvailable) {
+      headingLine.setStyle({ opacity: 0 });
+    }
+
+    // Zoom in to show the user's building/neighborhood (zoom 16 = street level)
+    map.setView([lat, lng], 16);
   }
 
   function updateMap(lat, lng) {
@@ -567,6 +574,22 @@
   }
 
   function updateUI() {
+    // Update compass rotation - on desktop without compass, point to Qibla direction statically
+    if (noCompassAvailable) {
+      // Keep compass plate at 0 (north up)
+      $('compassPlate').style.transform = `rotate(0deg)`;
+      if (qiblaBearing !== null) {
+        $('qiblaIndicator').style.transform = `rotate(${qiblaBearing}deg)`;
+        $('degreeValue').innerHTML = `${Math.round(qiblaBearing)}<span class="deg-symbol">°</span>`;
+      }
+      // Hide alignment message and facing legend on desktop
+      $('alignmentMsg').classList.remove('visible');
+      $('facingLegend').style.display = 'none';
+      // Hide heading line on map
+      if (headingLine) headingLine.setStyle({ opacity: 0 });
+      return;
+    }
+
     $('compassPlate').style.transform = `rotate(${-currentHeading}deg)`;
     if (qiblaBearing !== null) {
       $('qiblaIndicator').style.transform = `rotate(${qiblaBearing - currentHeading}deg)`;
@@ -615,7 +638,13 @@
     const dist = calculateDistance(userLat, userLng);
 
     $('gpsDot').classList.add('active');
-    $('statusText').textContent = compassSupported ? 'Compass active' : 'Waiting for compass…';
+    if (compassSupported) {
+      $('statusText').textContent = 'Compass active';
+    } else if (noCompassAvailable) {
+      $('statusText').textContent = 'Map mode — no compass sensor';
+    } else {
+      $('statusText').textContent = 'Detecting compass…';
+    }
     $('statusText').classList.remove('loading-pulse');
     $('distanceValue').innerHTML = `${dist.toFixed(0)} <small>km</small>`;
     $('bearingValue').textContent = `${qiblaBearing.toFixed(1)}°`;
@@ -702,14 +731,24 @@
     } else if ('DeviceOrientationEvent' in window) {
       window.addEventListener('deviceorientation', handleOrientation, true);
       setTimeout(() => {
-        if (!compassSupported && qiblaBearing !== null) {
-          $('statusText').textContent = 'No compass — showing bearing only';
+        if (!compassSupported) {
+          noCompassAvailable = true;
+          if (qiblaBearing !== null) {
+            $('statusText').textContent = 'Map mode — use map to verify direction';
+          } else {
+            $('statusText').textContent = 'Waiting for location…';
+          }
           $('statusText').classList.remove('loading-pulse');
           updateUI();
         }
-      }, 3000);
+      }, 2000);
     } else {
-      $('statusText').textContent = 'No compass sensor';
+      noCompassAvailable = true;
+      if (qiblaBearing !== null) {
+        $('statusText').textContent = 'Map mode — use map to verify direction';
+      } else {
+        $('statusText').textContent = 'Waiting for location…';
+      }
       $('statusText').classList.remove('loading-pulse');
     }
 
