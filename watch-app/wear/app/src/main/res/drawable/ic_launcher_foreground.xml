@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Kaaba cube -->
+    <path
+        android:fillColor="#C9A84C"
+        android:pathData="M38,40h32v34h-32z" />
+    <!-- kiswa band -->
+    <path
+        android:fillColor="#0A0E17"
+        android:pathData="M38,52h32v6h-32z" />
+</vector>
