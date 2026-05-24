@@ -23,7 +23,7 @@ class HeadingRepository(private val context: Context) {
                     val orientation = FloatArray(3)
                     SensorManager.getOrientation(rotationMatrix, orientation)
                     val azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                    val heading = (azimuth + 360) % 360
+                    val heading = (azimuth + 360f) % 360f
                     trySend(heading)
                 }
             }
