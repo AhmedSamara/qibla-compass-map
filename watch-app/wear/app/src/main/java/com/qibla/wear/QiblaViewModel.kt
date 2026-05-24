@@ -55,7 +55,8 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
         return (((avg % 360) + 360) % 360).toFloat()
     }
 
-    private fun startHeading() {
+    fun startHeading() {
+        if (headingJob != null) return
         headingJob = viewModelScope.launch {
             headingRepo.headingFlow().collectLatest { h ->
                 val s = smoothHeading(h)
