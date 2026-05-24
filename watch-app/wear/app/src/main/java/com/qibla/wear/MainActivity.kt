@@ -14,6 +14,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -21,10 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
@@ -110,51 +114,115 @@ fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .clip(CircleShape)
             .background(Color(0xFF0A0E17)),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CompassDial(
-                modifier = Modifier.size(110.dp),
-                heading = state.heading,
-                qibla = state.qiblaBearing,
-                aligned = state.aligned
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            if (state.userLat == null) {
-                Button(onClick = onRequestPermission) {
-                    Text("Enable Location")
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "Waiting for location…", fontSize = 11.sp, color = Color(0xFF8896AB))
-            } else {
+        if (state.map != null && state.qiblaBearing != null) {
+            MapCompass(state)
+            // bottom label pill over the map
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 14.dp)
+                    .background(Color(0xCC0A0E17), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
                 Text(
-                    text = if (state.aligned) "Facing Qibla" else state.qiblaBearing?.let { "${it.toInt()}°" } ?: "--°",
-                    fontSize = 22.sp,
+                    text = if (state.aligned) "Facing Qibla"
+                    else "${state.qiblaBearing.toInt()}°  ·  ${state.distanceKm?.toInt() ?: "--"} km",
+                    fontSize = 13.sp,
                     color = if (state.aligned) Color(0xFF3DD68C) else Color.White
                 )
-                Text(
-                    text = state.distanceKm?.let { "${it.toInt()} km" } ?: "-- km",
-                    fontSize = 12.sp,
-                    color = Color(0xFF8896AB)
-                )
-                if (!state.aligned) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Turn until arrow points up", fontSize = 10.sp, color = Color(0xFF8896AB))
-                }
             }
             if (state.calibrationNeeded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Move device in figure-8 to calibrate", fontSize = 11.sp, color = Color(0xFFE5484D))
+                Text(
+                    text = "figure-8 to calibrate",
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 10.dp)
+                        .background(Color(0xCC0A0E17), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                    fontSize = 10.sp,
+                    color = Color(0xFFE5484D)
+                )
+            }
+        } else {
+            // Fallback: plain dial (no GPS fix yet, or map/tiles unavailable)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CompassDial(
+                    modifier = Modifier.size(110.dp),
+                    heading = state.heading,
+                    qibla = state.qiblaBearing,
+                    aligned = state.aligned
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                if (state.userLat == null) {
+                    Button(onClick = onRequestPermission) {
+                        Text("Enable Location")
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(text = "Waiting for location…", fontSize = 11.sp, color = Color(0xFF8896AB))
+                } else {
+                    Text(
+                        text = if (state.aligned) "Facing Qibla" else state.qiblaBearing?.let { "${it.toInt()}°" } ?: "--°",
+                        fontSize = 22.sp,
+                        color = if (state.aligned) Color(0xFF3DD68C) else Color.White
+                    )
+                    Text(
+                        text = state.distanceKm?.let { "${it.toInt()} km" } ?: "-- km",
+                        fontSize = 12.sp,
+                        color = Color(0xFF8896AB)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Loading map…", fontSize = 10.sp, color = Color(0xFF8896AB))
+                }
+                if (state.calibrationNeeded) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Move device in figure-8 to calibrate", fontSize = 11.sp, color = Color(0xFFE5484D))
+                }
             }
         }
+    }
+}
+
+@Composable
+fun MapCompass(state: QiblaUiState) {
+    val map = state.map ?: return
+    val heading = state.heading ?: 0f
+    val qibla = (state.qiblaBearing ?: 0.0).toFloat()
+    val arrowColor = if (state.aligned) Color(0xFF3DD68C) else Color(0xFFC9A84C)
+    val img = remember(map.bitmap) { map.bitmap.asImageBitmap() }
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val r = size.minDimension / 2f
+        // Heading-up: rotate the map so the direction you're facing is at the top.
+        rotate(degrees = -heading, pivot = center) {
+            drawImage(image = img, topLeft = Offset(center.x - map.userX, center.y - map.userY))
+        }
+        // Qibla arrow from the user toward Mecca (points up when you face it).
+        rotate(degrees = qibla - heading, pivot = center) {
+            val tip = Offset(center.x, center.y - r * 0.62f)
+            drawLine(arrowColor, center, tip, strokeWidth = 7.dp.toPx(), cap = StrokeCap.Round)
+            val head = r * 0.16f
+            val path = Path().apply {
+                moveTo(tip.x, tip.y - 2.dp.toPx())
+                lineTo(tip.x - head * 0.7f, tip.y + head)
+                lineTo(tip.x + head * 0.7f, tip.y + head)
+                close()
+            }
+            drawPath(path, arrowColor)
+        }
+        // user marker
+        drawCircle(Color.White, radius = 6.dp.toPx(), center = center)
+        drawCircle(arrowColor, radius = 4.dp.toPx(), center = center)
     }
 }
 
