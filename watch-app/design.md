@@ -40,6 +40,15 @@ Port the existing web-based Qibla Compass app to Google Pixel Watch (Wear OS) as
 - Tap to open quick actions (recenter, calibration tip, settings).
 - Optional swipe to settings.
 
+---
+
+**Related (web app)**: The web version's feature list and implementation are authoritative for web-specific behaviors — see the main project `README.md` and `index.html` for the current web features and UX.
+
+- Web README: [../README.md](../README.md)
+- Web app entry: [../index.html](../index.html)
+
+Aim: keep feature parity where reasonable. Platform-specific tradeoffs are noted throughout this document.
+
 ## System Architecture
 
 ### Modules

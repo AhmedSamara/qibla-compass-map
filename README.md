@@ -77,6 +77,15 @@ qibla-compass/
 └── README.md
 ```
 
+## Watch App (Wear OS)
+
+This repository also contains a plan and task list for a Pixel Watch (Wear OS) native port of this web app. The watch app docs live in the `watch-app/` subdirectory:
+
+- Design & plan: [watch-app/design.md](watch-app/design.md)
+- Implementation tasks: [watch-app/tasks.md](watch-app/tasks.md)
+
+We aim to keep feature parity between the web PWA and the watch app where practical — see the watch design doc for details on which features are expected to match and which are intentionally different due to platform constraints.
+
 ## Browser Support
 
 | Platform | Compass | GPS | Install |
