@@ -52,7 +52,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
             cx += Math.cos(r)
         }
         val avg = Math.toDegrees(kotlin.math.atan2(sx / headingBuffer.size, cx / headingBuffer.size))
-        return ((avg % 360) + 360) % 360.toDouble().toFloat()
+        return (((avg % 360) + 360) % 360).toFloat()
     }
 
     private fun startHeading() {
@@ -103,11 +103,6 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = prev.copy(userLat = lat, userLng = lng, qiblaBearing = qibla, distanceKm = dist, aligned = aligned, status = "Location active")
             }
         }
-    }
-
-    fun stopLocationUpdates() {
-        locationJob?.cancel()
-        locationJob = null
     }
 
     fun stopLocationUpdates() {
