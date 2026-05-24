@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+
+# IDE compile output (Eclipse/VS Code style)
+bin/
+
+# Keep the Gradle wrapper jar (it must be committed)
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.cxx/
+
+# Local SDK config (machine-specific)
+local.properties
+
+# Signing material — never commit
+*.jks
+*.keystore
