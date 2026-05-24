@@ -8,6 +8,7 @@ import com.qibla.wear.repo.LocationRepository
 import com.qibla.wear.repo.MapData
 import com.qibla.wear.repo.MapRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -23,8 +24,13 @@ data class QiblaUiState(
     val aligned: Boolean = false,
     val calibrationNeeded: Boolean = false,
     val status: String = "",
-    val map: MapData? = null
+    val map: MapData? = null,
+    val zoom: Int = DEFAULT_ZOOM
 )
+
+private const val MIN_ZOOM = 13
+private const val MAX_ZOOM = 20
+private const val DEFAULT_ZOOM = 17
 
 class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     private val headingRepo = HeadingRepository(application.applicationContext)
@@ -37,6 +43,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     private var headingJob: Job? = null
     private var locationJob: Job? = null
     private var mapJob: Job? = null
+    private var currentZoom = DEFAULT_ZOOM
 
     private val headingBuffer = ArrayDeque<Float>()
     private val maxHeadingBuf = 5
@@ -116,10 +123,29 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
         if (mapJob?.isActive == true) return
         val cur = _uiState.value.map
         // (Re)fetch only on first fix or after moving ~50 m, to avoid spamming tile requests.
-        val needs = cur == null || abs(cur.lat - lat) > 0.0005 || abs(cur.lng - lng) > 0.0005
+        val needs = cur == null || cur.zoom != currentZoom ||
+            abs(cur.lat - lat) > 0.0005 || abs(cur.lng - lng) > 0.0005
         if (!needs) return
+        fetchMap(lat, lng, force = false)
+    }
+
+    /** Crown rotation: positive delta zooms in, negative zooms out. */
+    fun changeZoom(delta: Int) {
+        val nz = (currentZoom + delta).coerceIn(MIN_ZOOM, MAX_ZOOM)
+        if (nz == currentZoom) return
+        currentZoom = nz
+        _uiState.value = _uiState.value.copy(zoom = nz)
+        val lat = _uiState.value.userLat ?: return
+        val lng = _uiState.value.userLng ?: return
+        fetchMap(lat, lng, force = true)
+    }
+
+    private fun fetchMap(lat: Double, lng: Double, force: Boolean) {
+        mapJob?.cancel()
+        val z = currentZoom
         mapJob = viewModelScope.launch {
-            val data = mapRepo.fetchCenteredMap(lat, lng)
+            if (force) delay(150) // debounce rapid crown turns
+            val data = mapRepo.fetchCenteredMap(lat, lng, z)
             if (data != null) {
                 _uiState.value = _uiState.value.copy(map = data)
             }

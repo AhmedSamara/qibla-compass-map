@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,7 +25,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -61,7 +65,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val state by vm.uiState.collectAsState(initial = vm.uiState.value)
-                WatchCompassScreen(state = state, onRequestPermission = { requestLocationPermission() })
+                WatchCompassScreen(
+                    state = state,
+                    onRequestPermission = { requestLocationPermission() },
+                    onZoom = { vm.changeZoom(it) }
+                )
                 // Haptics for alignment
                 LaunchedEffect(state.aligned) {
                     if (state.aligned) {
@@ -110,12 +118,24 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit) {
+fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit, onZoom: (Int) -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    var rotaryAccum by remember { mutableStateOf(0f) }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(CircleShape)
-            .background(Color(0xFF0A0E17)),
+            .background(Color(0xFF0A0E17))
+            .onRotaryScrollEvent { event ->
+                rotaryAccum += event.verticalScrollPixels
+                val step = 120f // pixels of crown travel per zoom level
+                while (rotaryAccum >= step) { onZoom(1); rotaryAccum -= step }
+                while (rotaryAccum <= -step) { onZoom(-1); rotaryAccum += step }
+                true
+            }
+            .focusRequester(focusRequester)
+            .focusable(),
         contentAlignment = Alignment.Center
     ) {
         if (state.map != null && state.qiblaBearing != null) {
@@ -135,18 +155,17 @@ fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit) {
                     color = if (state.aligned) Color(0xFF3DD68C) else Color.White
                 )
             }
-            if (state.calibrationNeeded) {
-                Text(
-                    text = "figure-8 to calibrate",
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 10.dp)
-                        .background(Color(0xCC0A0E17), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    fontSize = 10.sp,
-                    color = Color(0xFFE5484D)
-                )
-            }
+            // top overlay: calibration hint if needed, otherwise current zoom level
+            Text(
+                text = if (state.calibrationNeeded) "figure-8 to calibrate" else "zoom ${state.zoom}",
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
+                    .background(Color(0xCC0A0E17), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                fontSize = 10.sp,
+                color = if (state.calibrationNeeded) Color(0xFFE5484D) else Color(0xFF8896AB)
+            )
         } else {
             // Fallback: plain dial (no GPS fix yet, or map/tiles unavailable)
             Column(
