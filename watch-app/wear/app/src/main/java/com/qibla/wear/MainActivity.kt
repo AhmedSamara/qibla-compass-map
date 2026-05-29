@@ -140,13 +140,21 @@ fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit, onZ
     ) {
         if (state.map != null && state.qiblaBearing != null) {
             MapCompass(state)
-            // bottom label pill over the map
-            Box(
+            // North-up indicator (the map no longer rotates with the compass)
+            Text(
+                text = "N",
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 6.dp),
+                fontSize = 12.sp,
+                color = Color(0xFFBFC8D6)
+            )
+            // bottom info pill: bearing/distance + zoom (or a compass-off hint)
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 14.dp)
+                    .padding(bottom = 12.dp)
                     .background(Color(0xCC0A0E17), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = if (state.aligned) "Facing Qibla"
@@ -154,18 +162,12 @@ fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit, onZ
                     fontSize = 13.sp,
                     color = if (state.aligned) Color(0xFF3DD68C) else Color.White
                 )
+                Text(
+                    text = if (state.calibrationNeeded) "compass off — use map" else "zoom ${state.zoom}",
+                    fontSize = 9.sp,
+                    color = if (state.calibrationNeeded) Color(0xFFE5484D) else Color(0xFF8896AB)
+                )
             }
-            // top overlay: calibration hint if needed, otherwise current zoom level
-            Text(
-                text = if (state.calibrationNeeded) "figure-8 to calibrate" else "zoom ${state.zoom}",
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 10.dp)
-                    .background(Color(0xCC0A0E17), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                fontSize = 10.sp,
-                color = if (state.calibrationNeeded) Color(0xFFE5484D) else Color(0xFF8896AB)
-            )
         } else {
             // Fallback: plain dial (no GPS fix yet, or map/tiles unavailable)
             Column(
@@ -215,21 +217,32 @@ fun WatchCompassScreen(state: QiblaUiState, onRequestPermission: () -> Unit, onZ
 @Composable
 fun MapCompass(state: QiblaUiState) {
     val map = state.map ?: return
-    val heading = state.heading ?: 0f
+    val heading = state.heading
     val qibla = (state.qiblaBearing ?: 0.0).toFloat()
-    val arrowColor = if (state.aligned) Color(0xFF3DD68C) else Color(0xFFC9A84C)
     val img = remember(map.bitmap) { map.bitmap.asImageBitmap() }
+    val gold = Color(0xFFC9A84C)
     Canvas(modifier = Modifier.fillMaxSize()) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val r = size.minDimension / 2f
-        // Heading-up: rotate the map so the direction you're facing is at the top.
-        rotate(degrees = -heading, pivot = center) {
-            drawImage(image = img, topLeft = Offset(center.x - map.userX, center.y - map.userY))
+        // North-up: the map is drawn unrotated, so it matches the streets around you
+        // regardless of the compass. North is always at the top.
+        drawImage(image = img, topLeft = Offset(center.x - map.userX, center.y - map.userY))
+
+        // Heading needle — where the compass thinks the watch is pointing. Secondary,
+        // visually distinct; turns green when it lines up with the (true) Qibla arrow.
+        if (heading != null) {
+            val needle = if (state.aligned) Color(0xFF3DD68C) else Color(0xFF5B9BD5)
+            rotate(degrees = heading, pivot = center) {
+                drawLine(needle, center, Offset(center.x, center.y - r * 0.5f),
+                    strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+            }
         }
-        // Qibla arrow from the user toward Mecca (points up when you face it).
-        rotate(degrees = qibla - heading, pivot = center) {
+
+        // Qibla arrow — geographic bearing from GPS only (no compass). This is the
+        // trustworthy reference: match it against the real streets on the map.
+        rotate(degrees = qibla, pivot = center) {
             val tip = Offset(center.x, center.y - r * 0.62f)
-            drawLine(arrowColor, center, tip, strokeWidth = 7.dp.toPx(), cap = StrokeCap.Round)
+            drawLine(gold, center, tip, strokeWidth = 7.dp.toPx(), cap = StrokeCap.Round)
             val head = r * 0.16f
             val path = Path().apply {
                 moveTo(tip.x, tip.y - 2.dp.toPx())
@@ -237,11 +250,11 @@ fun MapCompass(state: QiblaUiState) {
                 lineTo(tip.x + head * 0.7f, tip.y + head)
                 close()
             }
-            drawPath(path, arrowColor)
+            drawPath(path, gold)
         }
         // user marker
         drawCircle(Color.White, radius = 6.dp.toPx(), center = center)
-        drawCircle(arrowColor, radius = 4.dp.toPx(), center = center)
+        drawCircle(gold, radius = 4.dp.toPx(), center = center)
     }
 }
 

@@ -35,7 +35,7 @@ private const val DEFAULT_ZOOM = 17
 class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     private val headingRepo = HeadingRepository(application.applicationContext)
     private val locationRepo = LocationRepository(application.applicationContext)
-    private val mapRepo = MapRepository()
+    private val mapRepo = MapRepository(application.cacheDir)
 
     private val _uiState = MutableStateFlow(QiblaUiState(status = "Starting…"))
     val uiState: StateFlow<QiblaUiState> = _uiState
