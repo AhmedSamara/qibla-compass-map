@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qibla-compass-v3';
+const CACHE_NAME = 'qibla-compass-v4';
 const TILE_CACHE = 'qibla-tiles-v1';
 
 const ASSETS = [
