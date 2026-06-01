@@ -265,13 +265,18 @@
     border-radius: 12px;
     background: linear-gradient(180deg, rgba(201,168,76,0.08), rgba(255,255,255,0.02));
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
   }
   .install-panel .install-text { flex: 1; }
   .install-panel .install-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
-  .install-panel .install-sub { font-size: 12px; color: var(--text-muted); line-height: 1.35; }
+  .install-panel .install-sub { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .install-panel .install-steps { margin-top: 6px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .install-panel .install-steps strong { color: var(--text-primary); font-weight: 600; }
+  .install-panel .install-steps ol { margin: 6px 0 0; padding-left: 18px; }
+  .install-panel .install-steps ol li { margin-bottom: 2px; }
+  .install-panel .install-steps .ico { display: inline-block; vertical-align: -3px; color: var(--gold); }
   .install-panel .btn-install {
     padding: 10px 16px;
     border: none;
@@ -284,10 +289,6 @@
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
-  }
-  .install-panel .btn-install:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
   }
 
   .calibration-hint {
@@ -323,8 +324,9 @@
     <div class="install-text">
       <div class="install-title" id="installTitle">Install Qibla Compass</div>
       <div class="install-sub" id="installSub">Add to home screen for quick access</div>
+      <div class="install-steps" id="installSteps" hidden></div>
     </div>
-    <button class="btn-install" id="installBtn" disabled>Install</button>
+    <button class="btn-install" id="installBtn" hidden>Install</button>
   </div>
 
   <div class="status-bar">
@@ -447,15 +449,55 @@
   const installPanel = document.getElementById('installPanel');
   const installTitle = document.getElementById('installTitle');
   const installSub = document.getElementById('installSub');
+  const installSteps = document.getElementById('installSteps');
   const installBtn = document.getElementById('installBtn');
+
+  // Inline iOS-style share glyph (square with up-arrow) so the instructions match what the user sees.
+  const SHARE_ICON = '<svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+
+  const ua = navigator.userAgent;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  const isIOSSafari = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  const isAndroid = /Android/.test(ua);
+
+  function setSteps(html) {
+    if (html) { installSteps.innerHTML = html; installSteps.hidden = false; }
+    else { installSteps.hidden = true; }
+  }
+
+  if (isStandalone) {
+    installTitle.textContent = 'App Installed ✓';
+    installSub.textContent = 'Qibla Compass is running in app mode.';
+    setSteps('');
+  } else if (isIOSSafari) {
+    installTitle.textContent = 'Add to Home Screen';
+    installSub.textContent = 'iOS doesn\'t show an install button — use Safari\'s Share menu:';
+    setSteps(
+      '<ol>' +
+      '<li>Tap the <strong>Share</strong> button ' + SHARE_ICON + ' at the bottom of Safari.</li>' +
+      '<li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>' +
+      '<li>Tap <strong>Add</strong>.</li>' +
+      '</ol>'
+    );
+  } else if (isIOS) {
+    installTitle.textContent = 'Open in Safari to install';
+    installSub.textContent = 'On iPhone/iPad, only Safari can add this app to your home screen.';
+    setSteps('Open this page in <strong>Safari</strong>, then tap Share ' + SHARE_ICON + ' → <strong>Add to Home Screen</strong>.');
+  } else if (isAndroid) {
+    installTitle.textContent = 'Install Qibla Compass';
+    installSub.textContent = 'Add to your home screen for quick access and offline support.';
+    setSteps('If the <strong>Install</strong> button doesn\'t appear above, open the Chrome menu <strong>⋮</strong> → <strong>Install app</strong> (or <strong>Add to Home screen</strong>).');
+  } else {
+    installTitle.textContent = 'Install Qibla Compass';
+    installSub.textContent = 'Install this app for faster access and offline support.';
+    setSteps('');
+  }
 
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
-    installTitle.textContent = 'Install Qibla Compass';
-    installSub.textContent = 'Install this app for faster access and offline support.';
-    installBtn.disabled = false;
-    installBtn.style.display = '';
+    installBtn.hidden = false;
   });
 
   installBtn.addEventListener('click', async () => {
@@ -463,32 +505,16 @@
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     deferredPrompt = null;
-    installBtn.disabled = true;
+    installBtn.hidden = true;
   });
 
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
-    installTitle.textContent = 'App Installed';
+    installTitle.textContent = 'App Installed ✓';
     installSub.textContent = 'Qibla Compass is now installed on this device.';
-    installBtn.textContent = 'Installed';
-    installBtn.disabled = true;
+    setSteps('');
+    installBtn.hidden = true;
   });
-
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  if (isStandalone) {
-    installTitle.textContent = 'App Installed';
-    installSub.textContent = 'Qibla Compass is running in app mode.';
-    installBtn.textContent = 'Installed';
-    installBtn.disabled = true;
-  } else if (/iPhone|iPad/.test(navigator.userAgent)) {
-    installTitle.textContent = 'Add to Home Screen';
-    installSub.textContent = 'Tap Share, then choose "Add to Home Screen".';
-    installBtn.style.display = 'none';
-  } else {
-    installTitle.textContent = 'Install Qibla Compass';
-    installSub.textContent = 'Install this app for faster access and offline support.';
-    installBtn.disabled = true;
-  }
 
   // ══════════════════════════════════════════
   // Qibla Compass
