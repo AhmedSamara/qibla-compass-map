@@ -221,25 +221,30 @@ fun MapCompass(state: QiblaUiState) {
     val qibla = (state.qiblaBearing ?: 0.0).toFloat()
     val img = remember(map.bitmap) { map.bitmap.asImageBitmap() }
     val gold = Color(0xFFC9A84C)
+    val blueNeedle = if (state.aligned) Color(0xFF3DD68C) else Color(0xFF5B9BD5)
     Canvas(modifier = Modifier.fillMaxSize()) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val r = size.minDimension / 2f
-        // North-up: the map is drawn unrotated, so it matches the streets around you
-        // regardless of the compass. North is always at the top.
+        // North-up map (drawn unrotated), so streets stay readable as the watch turns.
         drawImage(image = img, topLeft = Offset(center.x - map.userX, center.y - map.userY))
 
-        // Heading needle — where the compass thinks the watch is pointing. Secondary,
-        // visually distinct; turns green when it lines up with the (true) Qibla arrow.
+        // Blue compass needle — behaves like a normal magnetic compass, but world-locked
+        // on Mecca instead of North. Its world direction stays fixed on the Qibla, so as
+        // the wrist rotates the needle visually counter-rotates on the (rotating) screen.
+        // Screen angle = qibla - heading: needle points straight up when you face Mecca,
+        // and swings the opposite way to your wrist as you turn.
         if (heading != null) {
-            val needle = if (state.aligned) Color(0xFF3DD68C) else Color(0xFF5B9BD5)
-            rotate(degrees = heading, pivot = center) {
-                drawLine(needle, center, Offset(center.x, center.y - r * 0.5f),
-                    strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+            val needleAngle = qibla - heading
+            rotate(degrees = needleAngle, pivot = center) {
+                drawLine(
+                    blueNeedle, center, Offset(center.x, center.y - r * 0.5f),
+                    strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round
+                )
             }
         }
 
-        // Qibla arrow — geographic bearing from GPS only (no compass). This is the
-        // trustworthy reference: match it against the real streets on the map.
+        // Gold Qibla arrow — pure GPS bearing, no compass. Stays fixed on the map,
+        // always pointing toward Mecca regardless of how you rotate your wrist.
         rotate(degrees = qibla, pivot = center) {
             val tip = Offset(center.x, center.y - r * 0.62f)
             drawLine(gold, center, tip, strokeWidth = 7.dp.toPx(), cap = StrokeCap.Round)

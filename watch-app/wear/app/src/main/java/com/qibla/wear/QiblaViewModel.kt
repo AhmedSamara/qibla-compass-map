@@ -45,26 +45,34 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     private var mapJob: Job? = null
     private var currentZoom = DEFAULT_ZOOM
 
-    private val headingBuffer = ArrayDeque<Float>()
-    private val maxHeadingBuf = 5
+    private val headingBuffer = ArrayDeque<Float>() // raw-sample buffer kept for the calibration heuristic
+    private val maxHeadingBuf = 12
+    private var smoothedHeading: Float? = null
+    private val smoothAlpha = 0.10f // exponential-smoothing factor (lower = smoother, more lag)
 
     init {
         startHeading()
     }
 
+    /**
+     * Exponential moving average with shortest-arc handling for circular angles.
+     * Each new sample nudges the smoothed value by [smoothAlpha] of the way toward it,
+     * so the needle stays steady when readings are noisy and doesn't overshoot when you stop.
+     */
     private fun smoothHeading(raw: Float): Float {
         headingBuffer.addLast(raw)
         if (headingBuffer.size > maxHeadingBuf) headingBuffer.removeFirst()
-        // simple circular average (approx)
-        var sx = 0.0
-        var cx = 0.0
-        for (h in headingBuffer) {
-            val r = Math.toRadians(h.toDouble())
-            sx += Math.sin(r)
-            cx += Math.cos(r)
+        val prev = smoothedHeading
+        if (prev == null) {
+            smoothedHeading = raw
+            return raw
         }
-        val avg = Math.toDegrees(kotlin.math.atan2(sx / headingBuffer.size, cx / headingBuffer.size))
-        return (((avg % 360) + 360) % 360).toFloat()
+        var diff = raw - prev
+        if (diff > 180f) diff -= 360f
+        if (diff < -180f) diff += 360f
+        val updated = ((prev + smoothAlpha * diff) % 360f + 360f) % 360f
+        smoothedHeading = updated
+        return updated
     }
 
     fun startHeading() {
@@ -79,7 +87,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                     val min = headingBuffer.minOrNull() ?: s
                     val max = headingBuffer.maxOrNull() ?: s
                     val range = kotlin.math.abs(max - min)
-                    range > 30f
+                    range > 60f
                 } else false
                 if (prev.qiblaBearing != null) {
                     var diff = ((prev.qiblaBearing - s) % 360 + 360) % 360
